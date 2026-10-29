@@ -1,0 +1,97 @@
+# Class to represent each item with its value and weight
+class Item:
+    def __init__(self, value, weight):
+        self.value = value    # Stores the value of the item
+        self.weight = weight  # Stores the weight of the item
+
+
+# Function to solve the Fractional Knapsack problem
+def fractional_knapsack(capacity, items):
+
+    # Sort items in descending order of value-to-weight ratio
+    items.sort(key=lambda item: item.value / item.weight, reverse=True)
+
+    total_value = 0.0  # Stores the maximum value obtained
+
+    print("\nItems selected:")
+
+    # Iterate through items in decreasing order of value-to-weight ratio
+    for item in items:
+
+        # Stop if the knapsack has no remaining capacity
+        if capacity == 0:
+            break
+
+        # If the entire item fits inside the knapsack
+        if item.weight <= capacity:
+            capacity -= item.weight  # Reduce the remaining capacity
+            total_value += item.value  # Add the item's full value
+
+            # Display the selected item and its fraction
+            print("Value:", item.value,
+                  "Weight:", item.weight,
+                  "Fraction taken: 1")
+
+        else:
+            # Calculate the fraction of the item that can fit
+            fraction = capacity / item.weight
+
+            # Add the proportional value of the fractional item
+            total_value += item.value * fraction
+
+            # Display the fraction of the item selected
+            print("Value:", item.value,
+                  "Weight:", item.weight,
+                  "Fraction taken:", round(fraction, 2))
+
+            capacity = 0  # Knapsack is now full
+
+    return total_value  # Return the maximum total value
+
+
+# Main Program
+# Sample Input:
+# Enter the number of items: 3
+# Enter value of item 1: 60
+# Enter weight of item 1: 10
+# Enter value of item 2: 100
+# Enter weight of item 2: 20
+# Enter value of item 3: 120
+# Enter weight of item 3: 30
+# Enter knapsack capacity: 50
+
+n = int(input("Enter the number of items: "))
+items = []  # Create an empty list to store items
+
+# Accept the value and weight of each item
+for i in range(n):
+    value = float(input("Enter value of item " + str(i + 1) + ": "))
+    weight = float(input("Enter weight of item " + str(i + 1) + ": "))
+
+    # Validate the weight and value entered by the user
+    if weight <= 0 or value < 0:
+        print("Weight must be positive and value cannot be negative.")
+        exit()
+
+    # Create an Item object and add it to the list
+    items.append(Item(value, weight))
+
+# Accept the maximum capacity of the knapsack
+capacity = float(input("Enter knapsack capacity: "))
+
+# Check whether the capacity is valid
+if capacity < 0:
+    print("Capacity cannot be negative.")
+else:
+    # Calculate and display the maximum obtainable value
+    max_value = fractional_knapsack(capacity, items)
+    print("\nMaximum value we can obtain:", round(max_value, 2))
+
+
+# Sample Output:
+# Items selected:
+# Value: 60.0 Weight: 10.0 Fraction taken: 1
+# Value: 100.0 Weight: 20.0 Fraction taken: 1
+# Value: 120.0 Weight: 30.0 Fraction taken: 0.67
+#
+# Maximum value we can obtain: 240.0
