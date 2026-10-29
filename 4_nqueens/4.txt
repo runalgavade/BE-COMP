@@ -1,0 +1,96 @@
+# N-Queen Problem using Backtracking
+# Places N queens on an N x N chessboard so that no two queens attack each other
+
+
+# Function to place queens row by row
+def placeQueens(i, cols, leftDiagonal, rightDiagonal, cur):
+    n = len(cols)  # Number of queens and board size
+
+    # Base case: All queens have been placed successfully
+    if i == n:
+        return True
+
+    # Try placing a queen in each column of the current row
+    for j in range(n):
+
+        # Check whether the column or diagonals are already occupied
+        if cols[j] or rightDiagonal[i + j] or leftDiagonal[i - j + n - 1]:
+            continue  # Skip this position if it is unsafe
+
+        # Mark the column and both diagonals as occupied
+        cols[j] = 1
+        rightDiagonal[i + j] = 1
+        leftDiagonal[i - j + n - 1] = 1
+
+        # Store the column position of the queen in the current row
+        cur.append(j)
+
+        # Recursively place a queen in the next row
+        if placeQueens(i + 1, cols, leftDiagonal, rightDiagonal, cur):
+            return True  # Solution found
+
+        # Backtrack: Remove the queen and mark its positions as free
+        cur.pop()
+        cols[j] = 0
+        rightDiagonal[i + j] = 0
+        leftDiagonal[i - j + n - 1] = 0
+
+    # Return False if no safe position is available
+    return False
+
+
+# Function to initialize the board and solve the N-Queen problem
+def nQueen(n):
+    # Array to track occupied columns
+    cols = [0] * n
+
+    # Arrays to track occupied diagonals
+    leftDiagonal = [0] * (2 * n)
+    rightDiagonal = [0] * (2 * n)
+
+    # Stores the column position of each queen
+    cur = []
+
+    # Create an empty chessboard filled with dots
+    board = [['.' for _ in range(n)] for _ in range(n)]
+
+    # Try to find a valid arrangement of queens
+    if placeQueens(0, cols, leftDiagonal, rightDiagonal, cur):
+
+        # Place queens on the board using their stored positions
+        for i in range(n):
+            board[i][cur[i]] = 'Q'
+
+        return board  # Return the solved chessboard
+    else:
+        return None  # Return None if no solution exists
+
+
+# Function to display the chessboard
+def printBoard(board):
+    if board:
+        # Print each row with spaces between the cells
+        for row in board:
+            print(" ".join(row))
+    else:
+        # Display a message if no solution is found
+        print("No solution exists.")
+
+
+# Main Program
+# Sample Input: 4
+n = int(input("Enter the number of queens: "))
+
+# Solve the N-Queen problem for the given number of queens
+board = nQueen(n)
+
+# Display the resulting chessboard
+printBoard(board)
+
+
+# Sample Output:
+# Enter the number of queens: 4
+# . Q . .
+# . . . Q
+# Q . . .
+# . . Q .
