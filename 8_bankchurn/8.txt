@@ -1,0 +1,41 @@
+# Step 1: Import the required libraries
+# Install if needed: pip install pandas numpy matplotlib seaborn
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Step 2: Load the Churn Modelling dataset
+# Sample input file: Churn_Modelling.csv
+df = pd.read_csv("Churn_Modelling.csv")
+
+# Display the first five rows
+df.head()
+
+# Step 3: Inspect the dataset's size, columns, and data types
+# Shape gives (rows, columns).
+print(df.shape)
+print(df.columns)
+df.info()
+
+# Step 4: Plot histograms for numeric columns
+# Histograms help visualize the distribution of variables.
+df.hist(figsize=(12, 8))
+plt.tight_layout()
+plt.show()
+
+# Step 5: Plot a correlation heatmap for numeric columns
+# Select numeric columns to calculate their correlation matrix.
+df_num = df.select_dtypes(include=np.number)
+
+plt.figure(figsize=(10, 6))
+sns.heatmap(df_num.corr(), cmap="coolwarm")
+plt.title("Correlation Heatmap of Numeric Features")
+plt.tight_layout()
+plt.show()
+
+# Step 6: Plot pairwise relationships for the first five numeric columns
+# The selected columns follow the order in the dataset.
+sns.pairplot(df_num.iloc[:, :5])
+plt.show()
+
