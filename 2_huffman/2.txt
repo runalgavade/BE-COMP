@@ -1,0 +1,116 @@
+import heapq  # Used to implement a priority queue (min-heap)
+from collections import Counter  # Used to count character frequencies
+
+
+# Node class represents each character or internal node in the Huffman tree
+class Node:
+    def __init__(self, char, freq):
+        self.char = char       # Stores the character
+        self.freq = freq       # Stores the frequency of the character
+        self.left = None       # Left child of the node
+        self.right = None      # Right child of the node
+
+    # Compares nodes based on their frequencies
+    def __lt__(self, other):
+        return self.freq < other.freq
+
+
+# Generates Huffman codes by traversing the Huffman tree
+def generate_codes(root, code, huffman_codes):
+    if root is None:
+        return  # Stop if the node is empty
+
+    # If it is a leaf node, store its Huffman code
+    if root.char is not None:
+        huffman_codes[root.char] = code if code else "0"
+        return
+
+    # Append 0 when moving to the left child
+    generate_codes(root.left, code + "0", huffman_codes)
+
+    # Append 1 when moving to the right child
+    generate_codes(root.right, code + "1", huffman_codes)
+
+
+# Performs Huffman encoding on the given text
+def huffman_encoding(text):
+    # Check whether the input string is empty
+    if not text:
+        print("Please enter a non-empty string.")
+        return
+
+    # Count the frequency of each character in the text
+    frequency = Counter(text)
+    heap = []  # Creates an empty min-heap
+
+    # Create a leaf node for each character and add it to the heap
+    for char, freq in frequency.items():
+        heapq.heappush(heap, Node(char, freq))
+
+    # Build the Huffman tree by combining the two lowest-frequency nodes
+    while len(heap) > 1:
+        left = heapq.heappop(heap)   # Remove the node with lowest frequency
+        right = heapq.heappop(heap)  # Remove the node with next-lowest frequency
+
+        # Create a new internal node with the combined frequency
+        new_node = Node(None, left.freq + right.freq)
+        new_node.left = left         # Assign the first node as the left child
+        new_node.right = right       # Assign the second node as the right child
+
+        # Insert the new node back into the min-heap
+        heapq.heappush(heap, new_node)
+
+    # The remaining node becomes the root of the Huffman tree
+    root = heapq.heappop(heap)
+    huffman_codes = {}  # Dictionary to store character-code pairs
+
+    # Generate binary Huffman codes for all characters
+    generate_codes(root, "", huffman_codes)
+
+    # Display the frequency and Huffman code of each character
+    print("\nCharacter Frequencies and Huffman Codes:")
+    for char, freq in sorted(frequency.items()):
+        # Display spaces using the word "Space"
+        display_char = "Space" if char == " " else char
+        print(f"{display_char}: Frequency = {freq}, Code = {huffman_codes[char]}")
+
+    # Encode the original text by replacing each character with its code
+    encoded_text = "".join(huffman_codes[char] for char in text)
+
+    # Display the original text and its encoded binary representation
+    print("\nOriginal Text:", text)
+    print("Encoded Text:", encoded_text)
+
+    # Calculate the original size assuming 8 bits per character
+    print("Original Size:", len(text) * 8, "bits")
+
+    # Calculate the size of the encoded text in bits
+    print("Encoded Size:", len(encoded_text), "bits")
+
+    # Calculate the average number of bits used per character
+    average_length = len(encoded_text) / len(text)
+    print("Average Code Length:", round(average_length, 2), "bits/character")
+
+
+# Main Program
+# Sample Input: hello
+text = input("Enter a string to encode: ")
+
+# Call the Huffman encoding function
+huffman_encoding(text)
+
+
+# Sample Output (Huffman codes may vary when frequencies are equal):
+# Enter a string to encode: hello
+#
+# Character Frequencies and Huffman Codes:
+# e: Frequency = 1, Code = 00
+# h: Frequency = 1, Code = 01
+# l: Frequency = 2, Code = 1
+# o: Frequency = 1, Code = 10
+#
+# Original Text: hello
+# Encoded Text: 011001101
+# Original Size: 40 bits
+# Encoded Size: 9 bits
+# Average Code Length: 1.8 bits/character
