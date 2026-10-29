@@ -1,0 +1,412 @@
+"""LP3 - Assignment 6: Uber Fare Prediction using Regression
+
+Requirements:
+    pip install pandas numpy matplotlib seaborn scikit-learn
+
+Input file:
+    Keep the dataset named 'uber.csv' in the same folder as this script.
+
+Note:
+    Dataset-analysis outputs and predicted fares depend on the contents of uber.csv
+    and can differ from one dataset/version to another.
+"""
+
+# ------------------------------------------------------------
+# STEP 1: Import required libraries
+# ------------------------------------------------------------
+import pandas as pd                      # Data handling
+import numpy as np                       # Numerical calculations
+import matplotlib.pyplot as plt          # Plotting graphs
+import seaborn as sns                    # Statistical visualizations
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+
+
+# ------------------------------------------------------------
+# STEP 2: Load and inspect the dataset
+# ------------------------------------------------------------
+# Read the Uber dataset from a CSV file in the current folder.
+df = pd.read_csv("uber.csv")
+
+# Display the first five records, dataset dimensions, and missing values.
+print("First five rows:")
+print(df.head())
+
+print("\nDataset shape:", df.shape)
+
+print("\nMissing values:")
+print(df.isnull().sum())
+
+# Sample output (values depend on uber.csv):
+# First five rows:
+#    ... first five dataset records ...
+# Dataset shape: (number_of_rows, number_of_columns)
+# Missing values:
+# ... missing-value count for each column ...
+
+
+# ------------------------------------------------------------
+# STEP 3: Clean and preprocess the dataset
+# ------------------------------------------------------------
+# Remove unnecessary columns if they are present. errors='ignore' avoids an error
+# when either column is absent from the dataset.
+df = df.drop(columns=["Unnamed: 0", "key"], errors="ignore")
+
+# Convert pickup_datetime to a datetime value. Invalid dates become missing values.
+df["pickup_datetime"] = pd.to_datetime(
+    df["pickup_datetime"], errors="coerce", utc=True
+)
+
+# Remove rows containing missing values and duplicate records.
+df = df.dropna()
+df = df.drop_duplicates()
+
+# Keep records with plausible fare, passenger count, and New York-area coordinates.
+df = df[
+    (df["fare_amount"] > 0) &
+    (df["fare_amount"] <= 100) &
+    (df["passenger_count"].between(1, 6)) &
+    (df["pickup_latitude"].between(40, 42)) &
+    (df["dropoff_latitude"].between(40, 42)) &
+    (df["pickup_longitude"].between(-75.5, -72.5)) &
+    (df["dropoff_longitude"].between(-75.5, -72.5))
+].copy()
+
+print("Shape after preprocessing:", df.shape)
+
+# Sample output (dataset-dependent):
+# Shape after preprocessing: (remaining_rows, remaining_columns)
+
+
+# ------------------------------------------------------------
+# STEP 4: Detect fare outliers using the IQR method
+# ------------------------------------------------------------
+# Q1 is the 25th percentile and Q3 is the 75th percentile of fare_amount.
+Q1 = df["fare_amount"].quantile(0.25)
+Q3 = df["fare_amount"].quantile(0.75)
+
+# The interquartile range measures the spread of the middle 50% of fares.
+IQR = Q3 - Q1
+
+# Values outside these limits are marked as potential outliers.
+lower_limit = Q1 - 1.5 * IQR
+upper_limit = Q3 + 1.5 * IQR
+
+outliers = df[
+    (df["fare_amount"] < lower_limit) |
+    (df["fare_amount"] > upper_limit)
+]
+
+print("Lower outlier limit:", round(lower_limit, 2))
+print("Upper outlier limit:", round(upper_limit, 2))
+print("Number of fare outliers:", len(outliers))
+
+# A boxplot visually shows the spread of fares and potential outliers.
+plt.figure(figsize=(8, 4))
+sns.boxplot(x=df["fare_amount"])
+plt.title("Boxplot of Uber Fare Amount")
+plt.tight_layout()
+plt.show()
+
+# Sample output: Numeric limits and outlier count depend on the dataset.
+# A boxplot window/figure is displayed.
+
+
+# ------------------------------------------------------------
+# STEP 5: Calculate ride distance using the Haversine formula
+# ------------------------------------------------------------
+def haversine_distance(lat1, lon1, lat2, lon2):
+    """Return great-circle distance in kilometres between two coordinates."""
+    earth_radius = 6371  # Approximate Earth's radius in kilometres
+
+    # Convert latitude and longitude from degrees to radians.
+    lat1 = np.radians(lat1)
+    lon1 = np.radians(lon1)
+    lat2 = np.radians(lat2)
+    lon2 = np.radians(lon2)
+
+    # Calculate differences in latitude and longitude.
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    # Apply the Haversine formula.
+    a = (
+        np.sin(dlat / 2) ** 2
+        + np.cos(lat1) * np.cos(lat2)
+        * np.sin(dlon / 2) ** 2
+    )
+
+    # Clip the value to [0, 1] to protect against floating-point rounding errors.
+    return 2 * earth_radius * np.arcsin(
+        np.sqrt(np.clip(a, 0, 1))
+    )
+
+
+# Add the calculated straight-line distance between pickup and drop-off points.
+df["distance_km"] = haversine_distance(
+    df["pickup_latitude"],
+    df["pickup_longitude"],
+    df["dropoff_latitude"],
+    df["dropoff_longitude"]
+)
+
+# Exclude zero-distance rides and unusually long distances above 100 km.
+df = df[
+    (df["distance_km"] > 0) &
+    (df["distance_km"] <= 100)
+].copy()
+
+print("Shape after distance calculation:", df.shape)
+
+# Sample output (dataset-dependent):
+# Shape after distance calculation: (remaining_rows, remaining_columns)
+
+
+# ------------------------------------------------------------
+# STEP 6: Extract date and time features
+# ------------------------------------------------------------
+# Convert pickup_datetime into separate numerical features for the models.
+df["pickup_hour"] = df["pickup_datetime"].dt.hour
+# Day of the month, from 1 to 31
+df["pickup_day"] = df["pickup_datetime"].dt.day
+# Month, from 1 to 12
+df["pickup_month"] = df["pickup_datetime"].dt.month
+# Four-digit year
+df["pickup_year"] = df["pickup_datetime"].dt.year
+
+print("Final dataset shape:", df.shape)
+print(df.head())
+
+# Sample output (dataset-dependent):
+# Final dataset shape: (remaining_rows, number_of_columns)
+# The first five rows now include distance_km, pickup_hour, pickup_day,
+# pickup_month, and pickup_year.
+
+
+# ------------------------------------------------------------
+# STEP 7: Correlation analysis and heatmap
+# ------------------------------------------------------------
+# Select fare and related numerical features for correlation analysis.
+features = [
+    "fare_amount",
+    "distance_km",
+    "passenger_count",
+    "pickup_hour",
+    "pickup_day",
+    "pickup_month",
+    "pickup_year"
+]
+
+# Calculate pairwise Pearson correlation coefficients.
+correlation = df[features].corr()
+
+print("Correlation Matrix:")
+print(correlation.round(2))
+
+# Display the correlation matrix as a colour-coded heatmap.
+plt.figure(figsize=(9, 6))
+sns.heatmap(correlation, annot=True, cmap="coolwarm", fmt=".2f")
+plt.title("Correlation Heatmap")
+plt.tight_layout()
+plt.show()
+
+# Sample output: A numeric correlation matrix is printed and a heatmap is shown.
+# Correlation values depend on the dataset.
+
+
+# ------------------------------------------------------------
+# STEP 8: Split data into training and testing sets
+# ------------------------------------------------------------
+# X contains input features used to predict the fare.
+X = df[
+    [
+        "distance_km",
+        "passenger_count",
+        "pickup_hour",
+        "pickup_day",
+        "pickup_month",
+        "pickup_year"
+    ]
+]
+
+# y is the target value that the models must predict.
+y = df["fare_amount"]
+
+# Use 80% of the data for training and 20% for testing.
+# random_state=42 makes the split reproducible for the same dataset.
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42
+)
+
+print("Training rows:", len(X_train))
+print("Testing rows:", len(X_test))
+
+# Sample output (row counts depend on the cleaned dataset):
+# Training rows: approximately 80% of the cleaned records
+# Testing rows: approximately 20% of the cleaned records
+
+
+# ------------------------------------------------------------
+# STEP 9: Train the Linear Regression model
+# ------------------------------------------------------------
+# Create and train a Linear Regression model on the training data.
+linear_model = LinearRegression()
+linear_model.fit(X_train, y_train)
+
+# Predict fares for the test data.
+linear_predictions = linear_model.predict(X_test)
+
+print("Linear Regression model trained successfully.")
+
+# Sample output:
+# Linear Regression model trained successfully.
+
+
+# ------------------------------------------------------------
+# STEP 10: Train the Random Forest Regression model
+# ------------------------------------------------------------
+# Create a Random Forest model using 50 decision trees.
+forest_model = RandomForestRegressor(
+    n_estimators=50,
+    max_depth=15,
+    min_samples_leaf=2,
+    random_state=42,
+    n_jobs=1
+)
+
+# Train the model and predict fares for the test set.
+forest_model.fit(X_train, y_train)
+forest_predictions = forest_model.predict(X_test)
+
+print("Random Forest model trained successfully.")
+
+# Sample output:
+# Random Forest model trained successfully.
+
+
+# ------------------------------------------------------------
+# STEP 11: Evaluate both regression models
+# ------------------------------------------------------------
+def evaluate_model(name, actual, predicted):
+    """Print R2, RMSE, and MAE; return the metrics as a list."""
+    # R2 measures how much variation in the target is explained by the model.
+    r2 = r2_score(actual, predicted)
+
+    # RMSE measures prediction error and penalizes larger errors more strongly.
+    rmse = np.sqrt(mean_squared_error(actual, predicted))
+
+    # MAE is the mean absolute difference between actual and predicted fares.
+    mae = mean_absolute_error(actual, predicted)
+
+    print("\n" + name)
+    print("R2 Score:", round(r2, 4))
+    print("RMSE:", round(rmse, 4))
+    print("MAE:", round(mae, 4))
+
+    return [r2, rmse, mae]
+
+
+# Calculate evaluation metrics for Linear Regression.
+linear_results = evaluate_model(
+    "Linear Regression",
+    y_test,
+    linear_predictions
+)
+
+# Calculate evaluation metrics for Random Forest Regression.
+forest_results = evaluate_model(
+    "Random Forest Regression",
+    y_test,
+    forest_predictions
+)
+
+# Sample output format (the metric values depend on the dataset):
+# Linear Regression
+# R2 Score: <value>
+# RMSE: <value>
+# MAE: <value>
+# Random Forest Regression
+# R2 Score: <value>
+# RMSE: <value>
+# MAE: <value>
+
+
+# ------------------------------------------------------------
+# STEP 12: Compare the models visually
+# ------------------------------------------------------------
+# Put the evaluation metrics into a DataFrame for side-by-side comparison.
+comparison = pd.DataFrame(
+    [linear_results, forest_results],
+    columns=["R2 Score", "RMSE", "MAE"],
+    index=["Linear Regression", "Random Forest"]
+)
+
+print("Model Comparison:")
+print(comparison.round(4))
+
+# Plot the metrics for both models as a bar chart.
+comparison.plot(kind="bar", figsize=(9, 5))
+plt.title("Comparison of Regression Models")
+plt.ylabel("Score")
+plt.xticks(rotation=0)
+plt.tight_layout()
+plt.show()
+
+# Sample output: A table of R2 Score, RMSE, and MAE is printed, followed by a bar chart.
+# Note that R2 is generally better when higher; RMSE and MAE are generally better when lower.
+
+
+# ------------------------------------------------------------
+# STEP 13: Predict the fare for a new ride
+# ------------------------------------------------------------
+# Sample Input:
+# Enter ride distance in km: 5.2
+# Enter passenger count: 2
+# Enter pickup hour (0-23): 14
+# Enter pickup day (1-31): 15
+# Enter pickup month (1-12): 6
+# Enter pickup year: 2015
+
+distance = float(input("Enter ride distance in km: "))
+passengers = int(input("Enter passenger count: "))
+hour = int(input("Enter pickup hour (0-23): "))
+day = int(input("Enter pickup day (1-31): "))
+month = int(input("Enter pickup month (1-12): "))
+year = int(input("Enter pickup year: "))
+
+# Validate the user-entered ride details before making a prediction.
+if (
+    distance <= 0 or
+    passengers < 1 or
+    not 0 <= hour <= 23 or
+    not 1 <= day <= 31 or
+    not 1 <= month <= 12
+):
+    print("Please enter valid ride details.")
+else:
+    # Arrange the new ride features in the same column order used during training.
+    new_ride = pd.DataFrame([{
+        "distance_km": distance,
+        "passenger_count": passengers,
+        "pickup_hour": hour,
+        "pickup_day": day,
+        "pickup_month": month,
+        "pickup_year": year
+    }])
+
+    # Use the trained Random Forest model to estimate the fare.
+    prediction = forest_model.predict(new_ride)[0]
+
+    # Do not display a negative predicted fare.
+    print(
+        "\nPredicted Uber fare (Random Forest):",
+        round(max(0, prediction), 2)
+    )
+
+# Sample output (the predicted amount depends on uber.csv and the trained model):
+# Predicted Uber fare (Random Forest): <predicted fare>
