@@ -1,0 +1,102 @@
+# 0-1 Knapsack Problem using Dynamic Programming
+# Displays the maximum value and details of selected items
+
+def knapsack(wt, val, W):
+    n = len(val)  # Total number of items
+
+    # Create a DP table initialized with zeros
+    # Rows represent items and columns represent knapsack capacities
+    dp = [[0 for _ in range(W + 1)] for _ in range(n + 1)]
+
+    # Fill the DP table using dynamic programming
+    for i in range(1, n + 1):
+        for w in range(1, W + 1):
+
+            # Check if the current item can fit in the knapsack
+            if wt[i - 1] <= w:
+
+                # Choose the maximum value between including and excluding the item
+                dp[i][w] = max(
+                    val[i - 1] + dp[i - 1][w - wt[i - 1]],
+                    dp[i - 1][w]
+                )
+            else:
+                # If the item does not fit, exclude it
+                dp[i][w] = dp[i - 1][w]
+
+    # Store the maximum value obtained for the given capacity
+    res = dp[n][W]
+    w = W  # Start from the maximum knapsack capacity
+    selected_items = []  # Stores the selected item details
+
+    # Trace back through the DP table to find selected items
+    for i in range(n, 0, -1):
+
+        # Stop if no value remains to be accounted for
+        if res <= 0:
+            break
+
+        # If the value is unchanged, the current item was not selected
+        if res == dp[i - 1][w]:
+            continue
+        else:
+            # Store item number, value, and weight
+            selected_items.append((i, val[i - 1], wt[i - 1]))
+
+            # Subtract the selected item's value and weight
+            res -= val[i - 1]
+            w -= wt[i - 1]
+
+    # Reverse the list to display items in their original order
+    selected_items.reverse()
+
+    # Return the maximum value and selected items
+    return dp[n][W], selected_items
+
+
+# Main Program
+
+# Sample Input:
+# Enter number of items: 3
+# Enter value of item 1: 60
+# Enter weight of item 1: 10
+# Enter value of item 2: 100
+# Enter weight of item 2: 20
+# Enter value of item 3: 120
+# Enter weight of item 3: 30
+# Enter capacity of knapsack: 50
+
+n = int(input("Enter number of items: "))
+
+val = []  # Stores the values of all items
+wt = []   # Stores the weights of all items
+
+# Accept the value and weight of each item
+for i in range(n):
+    val.append(int(input(f"Enter value of item {i+1}: ")))
+    wt.append(int(input(f"Enter weight of item {i+1}: ")))
+
+# Accept the maximum capacity of the knapsack
+W = int(input("Enter capacity of knapsack: "))
+
+# Calculate the maximum value and identify selected items
+max_value, selected = knapsack(wt, val, W)
+
+# Display the maximum obtainable value
+print("\nMaximum value that can be obtained =", max_value)
+
+# Display the details of selected items
+print("\nSelected items:")
+print("Item\tValue\tWeight")
+
+for item, v, w in selected:
+    print(f"{item}\t{v}\t{w}")
+
+
+# Sample Output:
+# Maximum value that can be obtained = 220
+#
+# Selected items:
+# Item    Value   Weight
+# 2       100     20
+# 3       120     30
