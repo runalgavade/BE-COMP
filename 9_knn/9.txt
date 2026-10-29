@@ -1,0 +1,96 @@
+# ============================================================
+# LP3 - ASSIGNMENT 9
+# Diabetes Prediction using KNN and Random Forest Classifiers
+# Name: Runal Gavade
+# Roll No: 62
+#
+# Sample Input:
+# No manual input is required. The dataset is loaded from the URL below.
+#
+# Required libraries:
+# pip install pandas numpy matplotlib seaborn scikit-learn
+# ============================================================
+
+
+# -------------------- STEP 1: IMPORT LIBRARIES --------------------
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+
+from sklearn.metrics import (
+    confusion_matrix,
+    accuracy_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+    roc_curve,
+    classification_report
+)
+
+
+# -------------------- STEP 2: LOAD THE DATASET --------------------
+# Load the Pima Indians Diabetes dataset from the online CSV file.
+url = "https://raw.githubusercontent.com/npradaschnor/Pima-Indians-Diabetes-Dataset/master/diabetes.csv"
+df = pd.read_csv(url)
+
+# Display dataset dimensions, column names, first five rows, and missing values.
+print("\nDATASET INFORMATION")
+print("Shape:", df.shape)
+print("Columns:", df.columns.tolist())
+print("\nFirst five rows:")
+print(df.head())
+print("\nMissing values in each column:")
+print(df.isnull().sum())
+
+
+# -------------------- STEP 3: HISTOGRAMS --------------------
+# Plot histograms to inspect the distribution of each dataset feature.
+df.hist(figsize=(12, 8))
+plt.tight_layout()
+plt.show()
+
+
+# -------------------- STEP 4: BOX PLOTS --------------------
+# Box plots help visualize the spread of values and potential outliers.
+df.plot(
+    kind="box",
+    subplots=True,
+    layout=(3, 3),
+    figsize=(12, 8),
+    sharex=False,
+    sharey=False
+)
+plt.tight_layout()
+plt.show()
+
+
+# -------------------- STEP 5: CORRELATION HEATMAP --------------------
+# Display correlations between numeric columns.
+plt.figure(figsize=(10, 7))
+sns.heatmap(
+    df.corr(numeric_only=True),
+    annot=True,
+    cmap="coolwarm"
+)
+plt.title("Correlation Heatmap")
+plt.tight_layout()
+plt.show()
+
+
+# -------------------- STEP 6: PREPROCESS AND SPLIT DATA --------------------
+# Separate the input features (X) from the target column (y).
+X = df.drop("Outcome", axis=1)
+y = df["Outcome"]
+
+# In this dataset, zero values in these columns can represent missing measurements.
+# Replace those zeros with NaN so the imputer can handle them.
+for col in ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]:
+    if col in X.columns:
