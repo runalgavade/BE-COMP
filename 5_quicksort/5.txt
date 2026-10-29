@@ -1,0 +1,85 @@
+import random  # Used to select a random pivot
+import time    # Used to measure execution time
+
+
+# Deterministic Quick Sort
+def deterministic_quick_sort(arr):
+    # Base case: An array with 0 or 1 element is already sorted
+    if len(arr) <= 1:
+        return arr
+
+    # Select the last element as the pivot
+    pivot = arr[-1]
+
+    # Store elements less than or equal to the pivot
+    left = [x for x in arr[:-1] if x <= pivot]
+
+    # Store elements greater than the pivot
+    right = [x for x in arr[:-1] if x > pivot]
+
+    # Recursively sort both parts and combine the result
+    return deterministic_quick_sort(left) + [pivot] + deterministic_quick_sort(right)
+
+
+# Randomized Quick Sort
+def randomized_quick_sort(arr):
+    # Base case: An array with 0 or 1 element is already sorted
+    if len(arr) <= 1:
+        return arr
+
+    # Select a random index for the pivot
+    pivot_index = random.randint(0, len(arr) - 1)
+
+    # Select the pivot element
+    pivot = arr[pivot_index]
+
+    # Create a new list excluding the pivot element
+    remaining = arr[:pivot_index] + arr[pivot_index + 1:]
+
+    # Store elements less than or equal to the pivot
+    left = [x for x in remaining if x <= pivot]
+
+    # Store elements greater than the pivot
+    right = [x for x in remaining if x > pivot]
+
+    # Recursively sort both parts and combine the result
+    return randomized_quick_sort(left) + [pivot] + randomized_quick_sort(right)
+
+
+# Main Program
+
+# Sample Input: 8 3 1 7 0 10 2
+arr = list(map(int, input("Enter numbers separated by spaces: ").split()))
+
+# Measure the execution time of Deterministic Quick Sort
+start = time.perf_counter()
+sorted_det = deterministic_quick_sort(arr.copy())
+end = time.perf_counter()
+
+# Display the deterministic Quick Sort result and execution time
+print("\nDeterministic Quick Sort:")
+print("Sorted Array:", sorted_det)
+print("Execution Time:", round(end - start, 8), "seconds")
+
+
+# Measure the execution time of Randomized Quick Sort
+start = time.perf_counter()
+sorted_rand = randomized_quick_sort(arr.copy())
+end = time.perf_counter()
+
+# Display the randomized Quick Sort result and execution time
+print("\nRandomized Quick Sort:")
+print("Sorted Array:", sorted_rand)
+print("Execution Time:", round(end - start, 8), "seconds")
+
+
+# Sample Output (execution times will vary):
+# Enter numbers separated by spaces: 8 3 1 7 0 10 2
+#
+# Deterministic Quick Sort:
+# Sorted Array: [0, 1, 2, 3, 7, 8, 10]
+# Execution Time: 0.0000XXXX seconds
+#
+# Randomized Quick Sort:
+# Sorted Array: [0, 1, 2, 3, 7, 8, 10]
+# Execution Time: 0.0000XXXX seconds
