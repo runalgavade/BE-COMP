@@ -1,0 +1,119 @@
+# Import pandas for reading and handling the dataset
+import pandas as pd
+
+# Import function to split the dataset into training and testing sets
+from sklearn.model_selection import train_test_split
+
+# Import the K-Nearest Neighbors and Support Vector Machine classifiers
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+
+# Import evaluation metrics for classification
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
+# Import libraries for plotting confusion-matrix heatmaps
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+# -------------------- Load and Prepare Dataset --------------------
+
+# Read the email dataset from a CSV file
+df = pd.read_csv("emails.csv", encoding="ISO-8859-1")
+
+# Remove the email identifier column if it exists, because it is not a feature
+if "Email No." in df.columns:
+    df = df.drop(columns=["Email No."])
+
+# Convert the target labels to integers (usually 0 = not spam, 1 = spam)
+df["Prediction"] = df["Prediction"].astype(int)
+
+# Separate input features (X) from the target label (y)
+X = df.drop(columns=["Prediction"])
+y = df["Prediction"]
+
+# Display the column names and first five rows to inspect the dataset
+print("Dataset columns:")
+print(df.columns)
+print("\\nFirst five rows:")
+print(df.head(5))
+
+
+# -------------------- Split Dataset --------------------
+
+# Use 80% of the data for training and 20% for testing.
+# random_state=42 makes the split reproducible.
+# stratify=y keeps the class proportions similar in both sets.
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+
+# -------------------- K-Nearest Neighbors (KNN) --------------------
+
+# Create a KNN classifier using the 5 nearest neighbors
+knn = KNeighborsClassifier(n_neighbors=5)
+
+# Train the classifier using the training data
+knn.fit(X_train, y_train)
+
+# Predict labels for the test data
+y_pred_knn = knn.predict(X_test)
+
+# Display KNN performance metrics
+print("\\n--- KNN Performance ---")
+print("Accuracy:", accuracy_score(y_test, y_pred_knn))
+print("Classification Report:\\n", classification_report(y_test, y_pred_knn))
+print("Confusion Matrix:\\n", confusion_matrix(y_test, y_pred_knn))
+
+
+# -------------------- Support Vector Machine (SVM) --------------------
+
+# Create an SVM classifier with a linear kernel for classification
+svm = SVC(kernel="linear", random_state=42)
+
+# Train the classifier using the training data
+svm.fit(X_train, y_train)
+
+# Predict labels for the test data
+y_pred_svm = svm.predict(X_test)
+
+# Display SVM performance metrics
+print("\\n--- SVM Performance ---")
+print("Accuracy:", accuracy_score(y_test, y_pred_svm))
+print("Classification Report:\\n", classification_report(y_test, y_pred_svm))
+print("Confusion Matrix:\\n", confusion_matrix(y_test, y_pred_svm))
+
+
+# -------------------- Plot Confusion Matrices --------------------
+
+# Create two side-by-side plots for comparing the classifiers
+fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+
+# Plot the KNN confusion matrix as a heatmap
+sns.heatmap(
+    confusion_matrix(y_test, y_pred_knn),
+    annot=True, fmt="d", cmap="Blues", ax=ax[0]
+)
+ax[0].set_title("KNN Confusion Matrix")
+ax[0].set_xlabel("Predicted")
+ax[0].set_ylabel("Actual")
+
+# Plot the SVM confusion matrix as a heatmap
+sns.heatmap(
+    confusion_matrix(y_test, y_pred_svm),
+    annot=True, fmt="d", cmap="Greens", ax=ax[1]
+)
+ax[1].set_title("SVM Confusion Matrix")
+ax[1].set_xlabel("Predicted")
+ax[1].set_ylabel("Actual")
+
+# Adjust spacing and display the plots
+plt.tight_layout()
+plt.show()
+
+
+# -------------------- Sample Output Notes --------------------
+# The exact accuracy, classification reports, confusion matrices, and heatmaps
+# depend on the contents of emails.csv and the installed library versions.
+# The program prints the results for both KNN and SVM and displays both plots.
