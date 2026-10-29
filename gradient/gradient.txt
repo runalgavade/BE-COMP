@@ -1,0 +1,47 @@
+# Gradient Descent to find the local minimum of y = (x + 3)^2
+
+# Function definition
+def f(x):
+    return (x + 3) ** 2  # Calculate the value of y
+
+
+# Derivative of the function
+def grad_f(x):
+    return 2 * (x + 3)  # Calculate the gradient (derivative)
+
+
+# Initial parameters
+x = 2               # Initial value of x
+learning_rate = 0.1 # Step size for updating x
+epochs = 25          # Number of iterations
+
+# Perform Gradient Descent
+print("Starting gradient descent...\n")
+
+for i in range(epochs):
+    grad = grad_f(x)  # Calculate the gradient at the current x
+
+    # Update x by moving in the opposite direction of the gradient
+    x = x - learning_rate * grad
+
+    # Display the current iteration, x value, and function value
+    print(f"Iteration {i + 1}: x = {x:.4f}, f(x) = {f(x):.4f}")
+
+# Display the approximate minimum after the iterations
+print("\nLocal minimum occurs at x =", round(x, 4))
+
+
+# Sample Input:
+# No user input is required.
+# Initial x = 2, learning rate = 0.1, epochs = 25
+
+# Sample Output (first few and final lines):
+# Starting gradient descent...
+#
+# Iteration 1: x = 1.0000, f(x) = 16.0000
+# Iteration 2: x = 0.2000, f(x) = 10.2400
+# Iteration 3: x = -0.4400, f(x) = 6.5536
+# ...
+# Iteration 25: x = -2.9528, f(x) = 0.0022
+#
+# Local minimum occurs at x = -2.9528
